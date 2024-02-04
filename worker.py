@@ -13,30 +13,35 @@ def get_indent(line: str) -> int:
     return indent
 
 
-def is_table_contains_html_tags(table: str) -> bool:
+def is_table_contains_html_tags(table: list[str]) -> bool:
     # Read the table char by char and check if it contains any HTML tags
     # If it encounters `, it's a code block, skip it until the next `
-    # If it encounters [, it's a link, skip it until the next )
-    in_code = False
-    in_link = False
-    in_tag = False
-    for char in table:
-        if char == "\n":
-            in_tag = False
-            in_link = False
-            in_code = False
-        if char == "`":
-            in_code = not in_code
-        if char == "[":
-            in_link = True
-        if in_link and char == ")":
-            in_link = False
-        if in_code or in_link:
-            continue
-        if char == "<":
-            in_tag = True
-        if char == ">" and in_tag:
-            return True
+    # If it encounters [, it's a link, skip it until the next ]
+    for line in table:
+        in_code = False
+        in_link = False
+        in_tag = False
+        for char in line:
+            # Skip new line characters
+            if char == "\n":
+                continue
+            # Skip code blocks
+            if char == "`":
+                in_code = not in_code
+            if in_code:
+                continue
+            # # Skip markdown links
+            # if char == "[":
+            #     in_link = True
+            # if in_link:
+            #     if char == "]":
+            #         in_link = False
+            #     continue
+            # Check for HTML tags
+            if char == "<":
+                in_tag = True
+            if in_tag and char == ">":
+                return True
     return False
 
 
@@ -113,7 +118,10 @@ def process_markdown_file(file_path: str):
                     html_table.append(line)
             elif in_md_table:
                 if not stripped.startswith("|"):
-                    out_lines.extend(convert_md_table(md_table))
+                    if is_table_contains_html_tags(md_table):
+                        out_lines.extend(convert_md_table(md_table))
+                    else:
+                        out_lines.extend(md_table)
                     out_lines.append(line)
                     in_md_table = False
                     md_table = []
@@ -131,7 +139,10 @@ def process_markdown_file(file_path: str):
         if in_html_table:
             raise AssertionError("in_html_table should always be false")
         if in_md_table:
-            out_lines.extend(convert_md_table(md_table))
+            if is_table_contains_html_tags(md_table):
+                out_lines.extend(convert_md_table(md_table))
+            else:
+                out_lines.extend(md_table)
     with open(file_path, "w") as file:
         for line in out_lines:
             file.write(line)
