@@ -22,9 +22,9 @@ for branch in "${TARGET_BRANCHES[@]}"; do
   git -C "$REPO_NAME" fetch origin "$branch"
   git -C "$REPO_NAME" checkout "$branch"
   git -C "$REPO_NAME" pull origin "$branch"
-  git -C "$REPO_NAME" checkout -b "$branch-convert-to-grid-table$(date +%Y%m%d%H%M%S)"
+  git -C "$REPO_NAME" checkout -b "$branch-convert-to-grid-table-$(date +%Y%m%d%H%M%S)"
   echo "Start to convert tables in $branch branch"
-  python3 worker.py
+  python3 worker.py "$REPO_NAME"
   git -C "$REPO_NAME" add .
   git -C "$REPO_NAME" commit -m "Convert HTML tables and pipe tables to grid tables" || echo "No changes to commit"
 done
