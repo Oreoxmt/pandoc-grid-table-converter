@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+from typing import Callable, Optional
 
 
 def get_indent(line: str) -> int:
@@ -18,7 +19,6 @@ def is_table_contains_html_tags(table: list[str]) -> bool:
     # If it encounters `, it's a code block, skip it until the next `
     for line in table:
         in_code = False
-        in_link = False
         in_tag = False
         for char in line:
             # Skip new line characters
@@ -50,12 +50,14 @@ def convert_html_table(table: list[str]) -> list[str]:
         stdout=subprocess.PIPE,
         universal_newlines=True,
     )
+    assert p.stdin is not None
+    assert p.stdout is not None
     for line in table:
         p.stdin.write(line)
     p.stdin.close()
     temp_result = [line for line in p.stdout]
     p.wait()
-    result = []
+    result:list[str] = []
     for line in temp_result:
         line_process_bullet = re.sub(r"\|( +)-( ){3}(\S(.*?))\|", "|\\1- \\3  |", line)
         result.append(line_process_bullet)
@@ -76,6 +78,8 @@ def convert_md_table(table: list[str]) -> list[str]:
         stdout=subprocess.PIPE,
         universal_newlines=True,
     )
+    assert p.stdin is not None
+    assert p.stdout is not None
     for line in table:
         if get_indent(line) != indent:
             raise RuntimeError("Indentation mismatch")
