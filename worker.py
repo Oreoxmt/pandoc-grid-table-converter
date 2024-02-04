@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+import sys
 from typing import Callable, Optional
 
 
@@ -190,11 +191,14 @@ def merge_grid_table_cells(file_path: str):
 
 
 def main():
+    if len(sys.argv) > 1:
+        work_dir = sys.argv[1]
+    else:
+        raise RuntimeError("Please provide a directory to work on")
     curr_dir = os.path.dirname(os.path.abspath(__file__))
-    work_dir = f"{curr_dir}/docs-cn"
     ignore_dirs = [".git", ".github", "resources", "media"]
     ignore_files = ["README.md", "CONTRIBUTING.md", "TOC.md"]
-    for root, dirs, files in os.walk(work_dir):
+    for root, dirs, files in os.walk(os.path.join(curr_dir, work_dir)):
         # Skip ignored directories
         dirs[:] = [d for d in dirs if d not in ignore_dirs]
         for file in files:
