@@ -89,15 +89,17 @@ def convert_md_table(table: list[str]) -> list[str]:
     return result
 
 
-def process_markdown_file(file_path: str, table_filter: str | None = None):
+def process_markdown_file(file_path: str, filter: Optional[Callable[[list[str]], bool]] = None):
+    if filter is None:
+        filter = lambda _: True
     out_lines: list[str] = []
     with open(file_path, "r") as file:
         in_html_table = False
         in_md_table = False
         in_code_block = False
         last_stripped_line = ""
-        html_table = []
-        md_table = []
+        html_table: list[str] = []
+        md_table: list[str] = []
         for line in file:
             stripped = line.strip()
             if stripped.startswith("```"):
@@ -114,7 +116,7 @@ def process_markdown_file(file_path: str, table_filter: str | None = None):
                     html_table.append(line)
             elif in_md_table:
                 if not stripped.startswith("|"):
-                    if table_filter != "html" or (table_filter == "html" and is_table_contains_html_tags(md_table)):
+                    if filter(md_table):
                         out_lines.extend(convert_md_table(md_table))
                     else:
                         out_lines.extend(md_table)
@@ -135,7 +137,7 @@ def process_markdown_file(file_path: str, table_filter: str | None = None):
         if in_html_table:
             raise AssertionError("in_html_table should always be false")
         if in_md_table:
-            if table_filter != "html" or (table_filter == "html" and is_table_contains_html_tags(md_table)):
+            if filter(md_table):
                 out_lines.extend(convert_md_table(md_table))
             else:
                 out_lines.extend(md_table)
@@ -195,7 +197,7 @@ def main():
             if file.endswith(".md") and file not in ignore_files:
                 file_path = os.path.join(root, file)
                 print(f"Processing {file_path}")
-                process_markdown_file(file_path, "html")
+                process_markdown_file(file_path, filter=is_table_contains_html_tags)
                 merge_grid_table_cells(file_path)
 
 
