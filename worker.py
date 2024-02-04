@@ -58,10 +58,12 @@ def convert_html_table(table: list[str]) -> list[str]:
     p.stdin.close()
     temp_result = [line for line in p.stdout]
     p.wait()
-    result:list[str] = []
+    result: list[str] = []
+    footnote_pattern = re.compile(r"\\\[\\(\^\d+?)\\\]")
+    bullet_pattern = re.compile(r"\|( +)-( ){3}(\S(.*?))\|")
     for line in temp_result:
-        line_process_bullet = re.sub(r"\|( +)-( ){3}(\S(.*?))\|", "|\\1- \\3  |", line)
-        result.append(line_process_bullet)
+        processed_line = bullet_pattern.sub(r"|\1- \3  |", footnote_pattern.sub(r"[\1]", line))
+        result.append(processed_line)
     return result
 
 
