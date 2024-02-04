@@ -45,7 +45,7 @@ def convert_html_table(table: list[str]) -> list[str]:
         [
             "pandoc",
             "--from=html",
-            "--to=markdown+grid_tables-pipe_tables-simple_tables-multiline_tables",
+            "--to=markdown+hard_line_breaks+grid_tables-pipe_tables-simple_tables-multiline_tables",
             "--wrap=none",
             "--lua-filter=remove-attr.lua",
         ],
