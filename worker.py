@@ -61,8 +61,12 @@ def convert_html_table(table: list[str]) -> list[str]:
     for line in table:
         p.stdin.write(line)
     p.stdin.close()
-    result = [line for line in p.stdout]
+    temp_result = [line for line in p.stdout]
     p.wait()
+    result = []
+    for line in temp_result:
+        line_process_bullet = re.sub(r"\|( +)-( ){3}(\S(.*?))\|", "|\\1- \\3  |", line)
+        result.append(line_process_bullet)
     return result
 
 
