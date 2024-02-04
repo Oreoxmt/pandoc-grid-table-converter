@@ -16,7 +16,6 @@ def get_indent(line: str) -> int:
 def is_table_contains_html_tags(table: list[str]) -> bool:
     # Read the table char by char and check if it contains any HTML tags
     # If it encounters `, it's a code block, skip it until the next `
-    # If it encounters [, it's a link, skip it until the next ]
     for line in table:
         in_code = False
         in_link = False
@@ -30,13 +29,6 @@ def is_table_contains_html_tags(table: list[str]) -> bool:
                 in_code = not in_code
             if in_code:
                 continue
-            # # Skip markdown links
-            # if char == "[":
-            #     in_link = True
-            # if in_link:
-            #     if char == "]":
-            #         in_link = False
-            #     continue
             # Check for HTML tags
             if char == "<":
                 in_tag = True
@@ -97,7 +89,7 @@ def convert_md_table(table: list[str]) -> list[str]:
     return result
 
 
-def process_markdown_file(file_path: str):
+def process_markdown_file(file_path: str, table_filter: str | None = None):
     out_lines: list[str] = []
     with open(file_path, "r") as file:
         in_html_table = False
@@ -122,7 +114,7 @@ def process_markdown_file(file_path: str):
                     html_table.append(line)
             elif in_md_table:
                 if not stripped.startswith("|"):
-                    if is_table_contains_html_tags(md_table):
+                    if table_filter != "html" or (table_filter == "html" and is_table_contains_html_tags(md_table)):
                         out_lines.extend(convert_md_table(md_table))
                     else:
                         out_lines.extend(md_table)
@@ -143,7 +135,7 @@ def process_markdown_file(file_path: str):
         if in_html_table:
             raise AssertionError("in_html_table should always be false")
         if in_md_table:
-            if is_table_contains_html_tags(md_table):
+            if table_filter != "html" or (table_filter == "html" and is_table_contains_html_tags(md_table)):
                 out_lines.extend(convert_md_table(md_table))
             else:
                 out_lines.extend(md_table)
@@ -203,7 +195,7 @@ def main():
             if file.endswith(".md") and file not in ignore_files:
                 file_path = os.path.join(root, file)
                 print(f"Processing {file_path}")
-                process_markdown_file(file_path)
+                process_markdown_file(file_path, "html")
                 merge_grid_table_cells(file_path)
 
 
