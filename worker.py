@@ -193,8 +193,15 @@ def merge_grid_table_cells(file_path: str):
 
 
 def main():
-    if len(sys.argv) > 1:
-        work_dir = sys.argv[1]
+    if len(sys.argv) > 2:
+        first_arg = sys.argv[1]
+        if first_arg == "html":
+            table_filter = is_table_contains_html_tags
+        elif first_arg == "all":
+            table_filter = None
+        else:
+            raise RuntimeError("Invalid filter")
+        work_dir = sys.argv[2]
     else:
         raise RuntimeError("Please provide a directory to work on")
     curr_dir = os.path.dirname(os.path.abspath(__file__))
@@ -207,7 +214,7 @@ def main():
             if file.endswith(".md") and file not in ignore_files:
                 file_path = os.path.join(root, file)
                 print(f"Processing {file_path}")
-                process_markdown_file(file_path, filter=is_table_contains_html_tags)
+                process_markdown_file(file_path, filter=table_filter)
                 merge_grid_table_cells(file_path)
 
 
