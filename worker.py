@@ -158,6 +158,7 @@ def merge_grid_table_cells(file_path: str):
     with open(file_path, "r") as file:
         in_grid_table = False
         in_code_block = False
+        pre_stripped_last_line = ""
         last_line = ""
         last_stripped_line = ""
         for line in file:
@@ -168,13 +169,13 @@ def merge_grid_table_cells(file_path: str):
                 out_lines.append(last_line)
             elif in_grid_table:
                 empty_first_cell = re.match(r"^\|( )+\|", stripped)
-                if empty_first_cell is not None:
+                if empty_first_cell is not None and pre_stripped_last_line != "":
                     pattern = r"^(\s*)\+(-+)\+"
                     match_last_line = re.match(pattern, last_line)
                     if match_last_line is not None:
                         row_width = len(match_last_line.group(2))
                         last_line = re.sub(
-                            pattern, rf"\1+{' ' * row_width}+", last_line
+                            pattern, rf"\1|{' ' * row_width}+", last_line
                         )
                 out_lines.append(last_line)
                 if not stripped.startswith("+") and not stripped.startswith("|"):
@@ -184,6 +185,7 @@ def merge_grid_table_cells(file_path: str):
                 out_lines.append(last_line)
             else:
                 out_lines.append(last_line)
+            pre_stripped_last_line = last_stripped_line
             last_line = line
             last_stripped_line = stripped
         out_lines.append(last_line)
