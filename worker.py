@@ -38,15 +38,20 @@ def is_table_contains_html_tags(table: list[str]) -> bool:
     return False
 
 
-def convert_html_table(table: list[str]) -> list[str]:
+def convert_html_table(table: list[str], lua_filter: None | str = None) -> list[str]:
+    if len(table) == 0:
+        return []
+    args = [
+        "pandoc",
+        "--from=html",
+        "--to=markdown-smart+hard_line_breaks+grid_tables-pipe_tables-simple_tables-multiline_tables",
+        "--wrap=none",
+        "--no-highlight",
+    ]
+    if lua_filter is not None:
+        args.append(f"--lua-filter={lua_filter}")
     p = subprocess.Popen(
-        [
-            "pandoc",
-            "--from=html",
-            "--to=markdown-smart+hard_line_breaks+grid_tables-pipe_tables-simple_tables-multiline_tables",
-            "--wrap=none",
-            "--lua-filter=remove-attr.lua",
-        ],
+        args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         universal_newlines=True,
@@ -76,6 +81,39 @@ def convert_md_table(table: list[str]) -> list[str]:
             "pandoc",
             "--from=gfm+pipe_tables",
             "--to=html",
+            "--wrap=none",
+            "--no-highlight",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    assert p.stdin is not None
+    assert p.stdout is not None
+    for line in table:
+        if get_indent(line) != indent:
+            raise RuntimeError("Indentation mismatch")
+        p.stdin.write(line[indent:])
+    p.stdin.close()
+    result = [
+        f"{' ' * indent}{line}"
+        for line in convert_html_table([line for line in p.stdout], "remove-attr.lua")
+    ]
+    p.wait()
+    return result
+
+
+def convert_mixed_table(table: list[str]) -> list[str]:
+    if len(table) == 0:
+        return []
+    indent = get_indent(table[0])
+    p = subprocess.Popen(
+        [
+            "pandoc",
+            "--from=markdown",
+            "--to=html",
+            "--wrap=none",
+            "--no-highlight",
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -104,6 +142,7 @@ def process_markdown_file(file_path: str, filter: Optional[Callable[[list[str]],
         in_html_table = False
         in_md_table = False
         in_code_block = False
+        mixed_md_html_table = False
         last_stripped_line = ""
         html_table: list[str] = []
         md_table: list[str] = []
@@ -111,12 +150,18 @@ def process_markdown_file(file_path: str, filter: Optional[Callable[[list[str]],
             stripped = line.strip()
             if stripped.startswith("```"):
                 in_code_block = not in_code_block
-            if in_code_block:
+                if in_html_table:
+                    mixed_md_html_table = True
+            if in_code_block and not in_html_table:
                 out_lines.append(line)
             elif in_html_table:
                 if stripped.startswith("</table>"):
                     html_table.append(line)
-                    out_lines.extend(convert_html_table(html_table))
+                    if mixed_md_html_table:
+                        out_lines.extend(convert_mixed_table(html_table))
+                        mixed_md_html_table = False
+                    else:
+                        out_lines.extend(convert_html_table(html_table, "remove-attr.lua"))
                     in_html_table = False
                     html_table = []
                 else:
